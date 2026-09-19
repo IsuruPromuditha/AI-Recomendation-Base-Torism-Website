@@ -1,0 +1,11 @@
+{
+  "name": "WayFarer AI",
+  "description": "Smart Multimodal Travel Companion and Sri Lanka Exploration Platform with OCR translation, tour bookings, admin management, phpMyAdmin database studio, and rich cultural, culinary, and economic showcases.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
