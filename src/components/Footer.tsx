@@ -257,10 +257,10 @@ export const Footer: React.FC<FooterProps> = ({ onSelectNavTab, onScrollToBookin
               <li>
                 <button
                   onClick={() => onSelectNavTab && onSelectNavTab('admin')}
-                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 text-amber-300 font-semibold"
+                  className="hover:text-amber-400 transition-colors text-left flex items-center gap-1.5 text-slate-400 font-medium"
                 >
-                  <Lock className="w-3 h-3 text-amber-400" />
-                  <span>Admin Panel & MySQL Studio Login</span>
+                  <Lock className="w-3 h-3 text-slate-500" />
+                  <span>Staff & Reservations Portal</span>
                 </button>
               </li>
             </ul>

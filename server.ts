@@ -4,6 +4,7 @@ import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { dbManager } from "./server/mysql.js";
 
 dotenv.config();
 
@@ -86,9 +87,206 @@ function loadSavedBookings(): any[] {
   return DEFAULT_BOOKINGS;
 }
 
+function generateCompleteSqlDump(bookings: any[], admins?: any[]): string {
+  const adminList = admins && admins.length > 0 ? admins : [
+    { username: 'admin', email: 'admin@wayfarer.lk', password_hash: 'admin123', full_name: 'Chief Travel Administrator', role: 'superadmin', is_active: 1 },
+    { username: 'operations', email: 'ops@wayfarer.lk', password_hash: 'ops123', full_name: 'Island Tour Operations Manager', role: 'admin', is_active: 1 },
+    { username: 'reservations', email: 'booking@wayfarer.lk', password_hash: 'reserve123', full_name: 'Front Desk Booking Officer', role: 'manager', is_active: 1 },
+  ];
+
+  const bookingInserts = bookings.map((b) => {
+    const ref = String(b.booking_ref || '').replace(/'/g, "''");
+    const tourId = Number(b.tour_id) || 1;
+    const tourTitle = String(b.tour_title || 'Sri Lanka Signature Tour').replace(/'/g, "''");
+    const name = String(b.customer_name || '').replace(/'/g, "''");
+    const email = String(b.customer_email || '').replace(/'/g, "''");
+    const phone = String(b.customer_phone || '').replace(/'/g, "''");
+    const travelDate = String(b.travel_date || '2026-11-15').slice(0, 10);
+    const guests = Number(b.guests_count) || 1;
+    const tier = String(b.package_tier || 'Comfort').replace(/'/g, "''");
+    const amount = Number(b.total_amount_usd) || 890.0;
+    const requests = String(b.special_requests || '').replace(/'/g, "''");
+    const status = String(b.status || 'Confirmed').replace(/'/g, "''");
+    return `('${ref}', ${tourId}, '${tourTitle}', '${name}', '${email}', '${phone}', '${travelDate}', ${guests}, '${tier}', ${amount.toFixed(2)}, '${requests}', '${status}')`;
+  }).join(',\n');
+
+  const adminInserts = adminList.map((a) => {
+    const u = String(a.username).replace(/'/g, "''");
+    const e = String(a.email).replace(/'/g, "''");
+    const p = String(a.password_hash || 'admin123').replace(/'/g, "''");
+    const f = String(a.full_name).replace(/'/g, "''");
+    const r = String(a.role || 'admin').replace(/'/g, "''");
+    const act = a.is_active ? 1 : 0;
+    return `('${u}', '${e}', '${p}', '${f}', '${r}', ${act})`;
+  }).join(',\n');
+
+  return `-- ==============================================================================
+-- WayFarer Travel Database Export
+-- Database: wayfarer_travel_db
+-- Generated: ${new Date().toISOString()}
+-- Total Active Bookings: ${bookings.length}
+-- ==============================================================================
+
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+CREATE DATABASE IF NOT EXISTS \`wayfarer_travel_db\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE \`wayfarer_travel_db\`;
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`admins\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`admins\`;
+CREATE TABLE \`admins\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`username\` VARCHAR(100) NOT NULL UNIQUE,
+  \`email\` VARCHAR(150) NOT NULL UNIQUE,
+  \`password_hash\` VARCHAR(255) NOT NULL,
+  \`full_name\` VARCHAR(150) NOT NULL,
+  \`role\` ENUM('superadmin', 'admin', 'manager') DEFAULT 'admin',
+  \`is_active\` TINYINT(1) DEFAULT 1,
+  \`last_login\` TIMESTAMP NULL DEFAULT NULL,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO \`admins\` (\`username\`, \`email\`, \`password_hash\`, \`full_name\`, \`role\`, \`is_active\`) VALUES
+${adminInserts};
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`users\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`users\`;
+CREATE TABLE \`users\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`full_name\` VARCHAR(150) NOT NULL,
+  \`email\` VARCHAR(150) NOT NULL UNIQUE,
+  \`password_hash\` VARCHAR(255) NOT NULL,
+  \`country\` VARCHAR(100) DEFAULT 'Sri Lanka',
+  \`role\` ENUM('admin', 'guide', 'traveler') DEFAULT 'traveler',
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO \`users\` (\`full_name\`, \`email\`, \`password_hash\`, \`country\`, \`role\`) VALUES
+('Travel Admin', 'admin@wayfarer.lk', 'admin123', 'Sri Lanka', 'admin'),
+('Chaminda Silva', 'guide.chaminda@wayfarer.lk', 'guide123', 'Sri Lanka', 'guide'),
+('Emma Watson', 'emma.w@gmail.com', 'traveler123', 'United Kingdom', 'traveler'),
+('Liam Becker', 'liam.b@germany.de', 'traveler123', 'Germany', 'traveler');
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`tours\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`tours\`;
+CREATE TABLE \`tours\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`title\` VARCHAR(200) NOT NULL,
+  \`slug\` VARCHAR(200) NOT NULL UNIQUE,
+  \`duration_days\` INT NOT NULL,
+  \`price_usd\` DECIMAL(10, 2) NOT NULL,
+  \`difficulty\` ENUM('Easy', 'Moderate', 'Challenging') DEFAULT 'Moderate',
+  \`highlights\` TEXT NOT NULL,
+  \`included\` TEXT NOT NULL,
+  \`image_url\` VARCHAR(255) NOT NULL,
+  \`is_featured\` TINYINT(1) DEFAULT 1,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO \`tours\` (\`id\`, \`title\`, \`slug\`, \`duration_days\`, \`price_usd\`, \`difficulty\`, \`highlights\`, \`included\`, \`image_url\`, \`is_featured\`) VALUES
+(1, '7-Day Golden Triangle & Misty Hill Country', 'golden-triangle-hill-country', 7, 890.00, 'Moderate', 'Sigiriya Rock Fortress, Dambulla Cave Temples, Kandy Temple of the Tooth, Scenic Ella Train Ride, Nine Arch Bridge', 'AC Chauffeur, 4-Star Heritage Hotels, Breakfast & Dinners, Monument Entrance Tickets, First-Class Train Seat', 'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?w=800&auto=format&fit=crop&q=80', 1),
+(2, '10-Day Complete Pearl of the Indian Ocean', 'complete-pearl-island-explorer', 10, 1350.00, 'Moderate', 'Colombo City Walk, Wilpattu Safari, Sigiriya & Polonnaruwa, Nuwara Eliya Tea Country, Yala Leopard Safari, Galle Dutch Fort', 'Private Luxury Van, Dedicated National Guide, Wildlife Jeep Safaris, All Boutique Hotel Stays, Airport Transfers', 'https://images.unsplash.com/photo-1546708973-b339540b5162?w=800&auto=format&fit=crop&q=80', 1),
+(3, '5-Day Wildlife Safari & Southern Riviera', 'wildlife-safari-southern-coast', 5, 620.00, 'Easy', 'Udawalawe Elephant Sanctuary, Mirissa Whale Watching, Stilt Fishermen of Koggala, UNESCO Galle Fort Sunset, Cinnamon Island', 'Private 4x4 Safari Jeeps, Beachfront Resorts, Whale Cruise Tickets, Gourmet Seafood Dinners', 'https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80', 1),
+(4, '4-Day Northern Mystique & Jaffna Heritage', 'northern-jaffna-heritage', 4, 520.00, 'Easy', 'Nallur Kandaswamy Kovil, Nainativu Island Ferry, Jaffna Dutch Fort, Point Pedro Northernmost Tip, Authentic Jaffna Crab Feast', 'Intercity AC Express Train / Chauffeur, Heritage Boutique Hotels, Local Tamil Culinary Guide, Island Boat Rides', 'https://images.unsplash.com/photo-1588598198321-9735fd52455b?w=800&auto=format&fit=crop&q=80', 0);
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`bookings\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`bookings\`;
+CREATE TABLE \`bookings\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`booking_ref\` VARCHAR(20) NOT NULL UNIQUE,
+  \`tour_id\` INT NOT NULL,
+  \`tour_title\` VARCHAR(200) DEFAULT 'Sri Lanka Signature Tour',
+  \`customer_name\` VARCHAR(150) NOT NULL,
+  \`customer_email\` VARCHAR(150) NOT NULL,
+  \`customer_phone\` VARCHAR(50) NOT NULL,
+  \`travel_date\` DATE NOT NULL,
+  \`guests_count\` INT NOT NULL DEFAULT 1,
+  \`package_tier\` ENUM('Standard', 'Comfort', 'Luxury VIP') DEFAULT 'Comfort',
+  \`total_amount_usd\` DECIMAL(10, 2) NOT NULL,
+  \`special_requests\` TEXT,
+  \`status\` ENUM('Pending', 'Confirmed', 'Completed', 'Cancelled') DEFAULT 'Confirmed',
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (\`tour_id\`) REFERENCES \`tours\`(\`id\`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+${bookingInserts ? `INSERT INTO \`bookings\` (\`booking_ref\`, \`tour_id\`, \`tour_title\`, \`customer_name\`, \`customer_email\`, \`customer_phone\`, \`travel_date\`, \`guests_count\`, \`package_tier\`, \`total_amount_usd\`, \`special_requests\`, \`status\`) VALUES\n${bookingInserts};` : '-- No active bookings yet'}
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`destinations\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`destinations\`;
+CREATE TABLE \`destinations\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`name\` VARCHAR(150) NOT NULL,
+  \`province\` VARCHAR(100) NOT NULL,
+  \`category\` VARCHAR(50) NOT NULL,
+  \`latitude\` DECIMAL(10, 6) NOT NULL,
+  \`longitude\` DECIMAL(10, 6) NOT NULL,
+  \`created_at\` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO \`destinations\` (\`name\`, \`province\`, \`category\`, \`latitude\`, \`longitude\`) VALUES
+('Sigiriya Rock Fortress', 'Central', 'Cultural', 7.957000, 80.760300),
+('Kandy Sacred Temple', 'Central', 'Heritage', 7.290600, 80.633700),
+('Galle Dutch Fort', 'Southern', 'Coastal', 6.032900, 80.216800),
+('Ella Nine Arch Bridge', 'Uva', 'Hill Country', 6.872200, 81.046400),
+('Yala National Park', 'Southern', 'Wildlife', 6.371200, 81.517000),
+('Jaffna Nallur Kovil', 'Northern', 'Heritage', 9.661500, 80.025500),
+('Anuradhapura Stupas', 'North Central', 'Cultural', 8.311400, 80.403700),
+('Mirissa Ocean Bay', 'Southern', 'Coastal', 5.948300, 80.457800);
+
+-- ------------------------------------------------------------------------------
+-- Table structure for \`festivals\`
+-- ------------------------------------------------------------------------------
+DROP TABLE IF EXISTS \`festivals\`;
+CREATE TABLE \`festivals\` (
+  \`id\` INT AUTO_INCREMENT PRIMARY KEY,
+  \`name\` VARCHAR(150) NOT NULL,
+  \`religion_culture\` VARCHAR(100) NOT NULL,
+  \`month_season\` VARCHAR(100) NOT NULL,
+  \`location\` VARCHAR(150) NOT NULL,
+  \`significance\` TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO \`festivals\` (\`name\`, \`religion_culture\`, \`month_season\`, \`location\`, \`significance\`) VALUES
+('Kandy Esala Perahera', 'Theravada Buddhism', 'July / August (Esala Poya)', 'Kandy (Temple of the Sacred Tooth)', 'Grand 10-night nocturnal procession with caparisoned tusker carrying the sacred casket, fire-dancers, and Kandyan drummers.'),
+('Sinhala & Tamil New Year (Aluth Avurudda)', 'National Cultural Heritage', 'April 13 - 14', 'Islandwide', 'Astronomical movement of the sun from Pisces to Aries; traditional hearth lighting, oil cakes (Kevum), and folk games.'),
+('Vesak Poya & Lantern Festival', 'Theravada Buddhism', 'May Full Moon', 'Colombo, Kandy & Islandwide', 'Celebration of Buddha Birth, Enlightenment, and Parinirvana with giant illuminated pandols and free food stalls (dansals).'),
+('Nallur Kandaswamy Festival', 'Hinduism', 'August - September (25 days)', 'Nallur, Jaffna', 'Most revered Hindu festival in Sri Lanka featuring chariot processions, Kavadi dancers, and devotional hymns to Lord Murugan.'),
+('Kataragama Esala Festival', 'Multifaith (Buddhist, Hindu, Vedda, Muslim)', 'July', 'Kataragama Shrine', 'Ancient mystical festival famous for ritual fire-walking across hot embers, holy river bathing, and multifaith pilgrimage.');
+
+COMMIT;
+`;
+}
+
+function syncSqlDumpFile(bookings: any[]): void {
+  try {
+    const dump = generateCompleteSqlDump(bookings);
+    const publicPath = path.join(process.cwd(), "public", "wayfarer_travel_db.sql");
+    const seedsPath = path.join(process.cwd(), "db", "seeds.sql");
+    
+    fs.writeFileSync(publicPath, dump, "utf-8");
+    fs.writeFileSync(seedsPath, dump, "utf-8");
+    console.log(`[WayFarer DB] Synchronized SQL dump with ${bookings.length} bookings`);
+  } catch (err) {
+    console.error("[WayFarer DB] Error syncing SQL dump file:", err);
+  }
+}
+
 function saveBookings(bookings: any[]): void {
   try {
     fs.writeFileSync(BOOKINGS_FILE, JSON.stringify(bookings, null, 2), "utf-8");
+    syncSqlDumpFile(bookings);
   } catch (err) {
     console.error("Could not save bookings file:", err);
   }
@@ -519,14 +717,138 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
   });
 
   // ---------------------------------------------------------------------------
-  // TOUR BOOKINGS API
+  // ADMIN AUTHENTICATION API (MySQL / WAMP Admins)
   // ---------------------------------------------------------------------------
-  app.get("/api/bookings", (_req, res) => {
-    const bookings = loadSavedBookings();
-    res.json({ success: true, bookings });
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { identifier, username, email, password } = req.body;
+      const loginId = identifier || username || email;
+      if (!loginId || !password) {
+        return res.status(400).json({ success: false, error: "Username/Email and Password are required." });
+      }
+
+      const result = await dbManager.verifyAdminLogin(loginId, password);
+      if (result.success && result.admin) {
+        const token = `wf_admin_${Buffer.from(`${result.admin.id}:${Date.now()}:${result.admin.role}`).toString("base64")}`;
+        return res.json({
+          success: true,
+          token,
+          admin: result.admin,
+          message: `Welcome back, ${result.admin.full_name}! Authenticated with Administrator privileges.`,
+        });
+      }
+
+      return res.status(401).json({
+        success: false,
+        error: result.error || "Invalid administrator credentials.",
+      });
+    } catch (err: any) {
+      console.error("[WayFarer Auth] Login error:", err);
+      return res.status(500).json({ success: false, error: "Authentication system error." });
+    }
   });
 
-  app.post("/api/bookings", (req, res) => {
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return res.status(401).json({ success: false, error: "No administrator session token provided." });
+      }
+
+      const token = authHeader.replace("Bearer ", "").trim();
+      const raw = Buffer.from(token.replace("wf_admin_", ""), "base64").toString("utf-8");
+      const [id] = raw.split(":");
+
+      const admins = await dbManager.getAdmins();
+      const target = admins.find((a) => String(a.id) === String(id));
+      if (target) {
+        return res.json({ success: true, admin: target });
+      }
+
+      return res.status(401).json({ success: false, error: "Administrator session expired or revoked." });
+    } catch {
+      return res.status(401).json({ success: false, error: "Invalid authorization token format." });
+    }
+  });
+
+  app.post("/api/auth/logout", (_req, res) => {
+    res.json({ success: true, message: "Logged out from Administrator portal." });
+  });
+
+  app.get("/api/auth/admins", async (_req, res) => {
+    try {
+      const admins = await dbManager.getAdmins();
+      res.json({ success: true, admins });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Failed to list admins." });
+    }
+  });
+
+  app.post("/api/auth/admins", async (req, res) => {
+    try {
+      const { username, email, password, full_name, role } = req.body;
+      if (!username || !email || !password || !full_name) {
+        return res.status(400).json({
+          success: false,
+          error: "All fields are required: username, email, password, full_name.",
+        });
+      }
+      const created = await dbManager.createAdmin({ username, email, password, full_name, role });
+      res.status(201).json({ success: true, admin: created });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err?.message || "Failed to create administrator." });
+    }
+  });
+
+  app.delete("/api/auth/admins/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      await dbManager.deleteAdmin(id);
+      res.json({ success: true, message: "Admin account removed." });
+    } catch (err: any) {
+      res.status(400).json({ success: false, error: err?.message || "Failed to remove administrator." });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // MYSQL & WAMP DATABASE HEALTH / CONNECTION API
+  // ---------------------------------------------------------------------------
+  app.get("/api/db/status", (_req, res) => {
+    const status = dbManager.getStatus();
+    res.json({ success: true, ...status });
+  });
+
+  app.post("/api/db/test-connection", async (req, res) => {
+    try {
+      const { host, port, user, password, database } = req.body;
+      const result = await dbManager.initPool({
+        host: host || "127.0.0.1",
+        port: Number(port) || 3306,
+        user: user || "root",
+        password: password !== undefined ? password : "",
+        database: database || "wayfarer_travel_db",
+      });
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message || "Connection test failed." });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // TOUR BOOKINGS API (With SQL persistence & live sync)
+  // ---------------------------------------------------------------------------
+  app.get("/api/bookings", async (_req, res) => {
+    // If MySQL has active bookings, keep them synchronized
+    const mysqlBookings = await dbManager.getBookingsFromMySQL();
+    if (mysqlBookings && mysqlBookings.length > 0) {
+      saveBookings(mysqlBookings);
+      return res.json({ success: true, bookings: mysqlBookings, source: "MySQL Engine" });
+    }
+    const bookings = loadSavedBookings();
+    res.json({ success: true, bookings, source: "Resilient Local Engine" });
+  });
+
+  app.post("/api/bookings", async (req, res) => {
     try {
       const {
         tour_id,
@@ -569,6 +891,11 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
       bookings.unshift(newBooking);
       saveBookings(bookings);
 
+      // Async persist to MySQL with full error logging and column compatibility
+      dbManager.saveBookingToMySQL(newBooking).catch((err) => {
+        console.error("[WayFarer DB] Async MySQL booking persistence warning:", err?.message || err);
+      });
+
       return res.status(201).json({
         success: true,
         booking: newBooking,
@@ -580,7 +907,7 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
     }
   });
 
-  app.put("/api/bookings/:id/status", (req, res) => {
+  app.put("/api/bookings/:id/status", async (req, res) => {
     const id = Number(req.params.id);
     const { status } = req.body;
     const allowed = ["Pending", "Confirmed", "Completed", "Cancelled"];
@@ -596,25 +923,58 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
 
     target.status = status;
     saveBookings(bookings);
+
+    // Sync to MySQL
+    dbManager.updateBookingStatusInMySQL(target.booking_ref, status).catch((err) => {
+      console.error("[WayFarer DB] Async MySQL update status warning:", err?.message || err);
+    });
+
     res.json({ success: true, booking: target });
   });
 
-  app.delete("/api/bookings/:id", (req, res) => {
+  app.delete("/api/bookings/:id", async (req, res) => {
     const id = Number(req.params.id);
     const bookings = loadSavedBookings();
+    const target = bookings.find((b: any) => b.id === id);
     const updated = bookings.filter((b: any) => b.id !== id);
     saveBookings(updated);
+
+    if (target) {
+      dbManager.deleteBookingInMySQL(target.booking_ref).catch((err) => {
+        console.error("[WayFarer DB] Async MySQL delete booking warning:", err?.message || err);
+      });
+    }
+
     res.json({ success: true, message: "Booking removed." });
   });
 
   // ---------------------------------------------------------------------------
   // PHPMYADMIN / DATABASE MANAGEMENT STUDIO API
   // ---------------------------------------------------------------------------
-  app.get("/api/db/tables", (_req, res) => {
+  app.get("/api/db/tables", async (_req, res) => {
     const bookings = loadSavedBookings();
     const scans = loadSavedScans();
+    const admins = await dbManager.getAdmins();
 
     const tables = [
+      {
+        name: "admins",
+        engine: "InnoDB",
+        collation: "utf8mb4_unicode_ci",
+        rows_count: admins.length,
+        primary_key: "id",
+        description: "Administrator login credentials, superadmin, ops, and manager role security.",
+        columns: [
+          { field: "id", type: "int(11)", null: "NO", key: "PRI", default: null, extra: "auto_increment" },
+          { field: "username", type: "varchar(100)", null: "NO", key: "UNI", default: null, extra: "" },
+          { field: "email", type: "varchar(150)", null: "NO", key: "UNI", default: null, extra: "" },
+          { field: "full_name", type: "varchar(150)", null: "NO", key: "", default: null, extra: "" },
+          { field: "role", type: "enum('superadmin','admin','manager')", null: "YES", key: "", default: "'admin'", extra: "" },
+          { field: "is_active", type: "tinyint(1)", null: "YES", key: "", default: "1", extra: "" },
+          { field: "last_login", type: "timestamp", null: "YES", key: "", default: null, extra: "" },
+          { field: "created_at", type: "timestamp", null: "YES", key: "", default: "CURRENT_TIMESTAMP", extra: "" },
+        ],
+      },
       {
         name: "bookings",
         engine: "InnoDB",
@@ -719,19 +1079,38 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
       },
     ];
 
+    const dbStatus = dbManager.getStatus();
+
     res.json({
       success: true,
       database: "wayfarer_travel_db",
-      server_info: "MySQL 8.0.35 via phpMyAdmin Studio Engine",
-      user: "root@localhost",
+      server_info: dbStatus.connected ? "MySQL 8.0 / MariaDB" : "WayFarer Operations Engine",
+      is_connected: dbStatus.connected,
+      user: `${dbStatus.config.user}@${dbStatus.config.host}`,
       tables,
     });
   });
 
-  app.get("/api/db/table/:tableName", (req, res) => {
+  app.get("/api/db/table/:tableName", async (req, res) => {
     const tableName = req.params.tableName.toLowerCase();
     const bookings = loadSavedBookings();
     const scans = loadSavedScans();
+
+    // Check if live MySQL can fulfill the request
+    const liveQuery = await dbManager.executeQuery(`SELECT * FROM \`${tableName}\` LIMIT 100;`);
+    if (liveQuery && liveQuery.success && Array.isArray(liveQuery.rows)) {
+      return res.json({
+        success: true,
+        table: tableName,
+        rows: liveQuery.rows,
+        source: "Live MySQL (WAMP Server)",
+      });
+    }
+
+    if (tableName === "admins") {
+      const admins = await dbManager.getAdmins();
+      return res.json({ success: true, table: "admins", rows: admins });
+    }
 
     if (tableName === "bookings") {
       return res.json({ success: true, table: "bookings", rows: bookings });
@@ -796,19 +1175,38 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
     res.status(404).json({ success: false, error: `Table '${tableName}' not found in database.` });
   });
 
-  app.post("/api/db/query", (req, res) => {
+  app.post("/api/db/query", async (req, res) => {
     const { query } = req.body;
     if (!query || typeof query !== "string") {
       return res.status(400).json({ success: false, error: "SQL query string is required." });
     }
 
     const trimmed = query.trim();
+
+    // 1. If live MySQL is connected, execute query directly!
+    const liveResult = await dbManager.executeQuery(trimmed);
+    if (liveResult) {
+      return res.json(liveResult);
+    }
+
+    // 2. Resilient Simulator for preview environment
     const upper = trimmed.toUpperCase();
     const startTime = Date.now();
 
-    // Select query router
     if (upper.startsWith("SELECT")) {
       const bookings = loadSavedBookings();
+      const admins = await dbManager.getAdmins();
+
+      if (upper.includes("ADMINS")) {
+        return res.json({
+          success: true,
+          query: trimmed,
+          execution_time_ms: Math.max(1, Date.now() - startTime),
+          rows_count: admins.length,
+          rows: admins,
+          source: "WayFarer Operations Engine",
+        });
+      }
       if (upper.includes("BOOKINGS")) {
         return res.json({
           success: true,
@@ -816,6 +1214,7 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
           execution_time_ms: Math.max(1, Date.now() - startTime),
           rows_count: bookings.length,
           rows: bookings,
+          source: "WayFarer Operations Engine",
         });
       }
       if (upper.includes("TOURS")) {
@@ -831,62 +1230,52 @@ Return JSON with "reply" and "suggestedQuestions" array.`;
           execution_time_ms: Math.max(1, Date.now() - startTime),
           rows_count: tours.length,
           rows: tours,
+          source: "WayFarer Operations Engine",
+        });
+      }
+      if (upper.includes("USERS")) {
+        const users = [
+          { id: 1, full_name: "Travel Admin", email: "admin@wayfarer.lk", role: "admin" },
+          { id: 2, full_name: "Chaminda Silva", email: "guide.chaminda@wayfarer.lk", role: "guide" },
+          { id: 3, full_name: "Emma Watson", email: "emma.w@gmail.com", role: "traveler" },
+        ];
+        return res.json({
+          success: true,
+          query: trimmed,
+          execution_time_ms: Math.max(1, Date.now() - startTime),
+          rows_count: users.length,
+          rows: users,
+          source: "WayFarer Operations Engine",
         });
       }
     }
 
-    // Generic SQL response for DDL / DML
     res.json({
       success: true,
       query: trimmed,
-      message: "Query executed successfully in phpMyAdmin database engine.",
+      message: "Query executed successfully in WayFarer database engine.",
       execution_time_ms: Math.max(1, Date.now() - startTime),
       affected_rows: 1,
       rows: [],
+      source: "WayFarer Operations Database Engine",
     });
   });
 
-  app.get("/api/db/export", (_req, res) => {
+  app.get("/api/db/export", async (_req, res) => {
     try {
-      const schemaPath = path.join(process.cwd(), "db", "schema.sql");
-      const seedsPath = path.join(process.cwd(), "db", "seeds.sql");
-
-      let schemaContent = "-- WayFarer AI Schema\n";
-      if (fs.existsSync(schemaPath)) {
-        schemaContent = fs.readFileSync(schemaPath, "utf-8");
-      }
-
-      let seedsContent = "-- WayFarer AI Seeds\n";
-      if (fs.existsSync(seedsPath)) {
-        seedsContent = fs.readFileSync(seedsPath, "utf-8");
-      }
-
       const bookings = loadSavedBookings();
-      let liveBookingsInsert = "\n-- Live Bookings Data Dump\n";
-      bookings.forEach((b: any) => {
-        liveBookingsInsert += `INSERT INTO \`bookings\` (\`booking_ref\`, \`tour_id\`, \`customer_name\`, \`customer_email\`, \`customer_phone\`, \`travel_date\`, \`guests_count\`, \`package_tier\`, \`total_amount_usd\`, \`status\`) VALUES ('${b.booking_ref}', ${b.tour_id}, '${b.customer_name}', '${b.customer_email}', '${b.customer_phone}', '${b.travel_date}', ${b.guests_count}, '${b.package_tier}', ${b.total_amount_usd}, '${b.status}');\n`;
-      });
+      const admins = await dbManager.getAdmins();
+      const dump = generateCompleteSqlDump(bookings, admins);
 
-      const fullDump = `-- --------------------------------------------------------
--- phpMyAdmin SQL Dump
--- version 5.2.1
--- Host: 127.0.0.1
--- Generation Time: ${new Date().toUTCString()}
--- Server version: 8.0.35-MySQL
--- PHP Version: 8.2.12
--- Database: \`wayfarer_travel_db\`
--- --------------------------------------------------------
-
-${schemaContent}
-
-${seedsContent}
-
-${liveBookingsInsert}
-`;
+      // Keep public and db files fresh
+      try {
+        fs.writeFileSync(path.join(process.cwd(), "public", "wayfarer_travel_db.sql"), dump, "utf-8");
+        fs.writeFileSync(path.join(process.cwd(), "db", "seeds.sql"), dump, "utf-8");
+      } catch {}
 
       res.setHeader("Content-Type", "application/sql");
       res.setHeader("Content-Disposition", 'attachment; filename="wayfarer_travel_db.sql"');
-      res.send(fullDump);
+      return res.send(dump);
     } catch (err: any) {
       res.status(500).send(`Error generating database export: ${err?.message}`);
     }
@@ -906,6 +1295,9 @@ ${liveBookingsInsert}
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
+
+  // Ensure public SQL dump file is initialized with all current bookings
+  syncSqlDumpFile(loadSavedBookings());
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`WayFarer AI server running on port ${PORT}`);

@@ -1,18 +1,35 @@
 -- ==============================================================================
 -- WayFarer AI — Sri Lanka Travel & Tour Management System
--- MySQL / phpMyAdmin Compatible Database Schema
--- Compatible with MySQL 5.7+, MySQL 8.0+, and MariaDB
+-- MySQL / phpMyAdmin Compatible Database Schema (WAMP / XAMPP / MariaDB / MySQL)
 -- ==============================================================================
+
+CREATE DATABASE IF NOT EXISTS `wayfarer_travel_db` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE `wayfarer_travel_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `bookings`;
 DROP TABLE IF EXISTS `tours`;
 DROP TABLE IF EXISTS `destinations`;
-DROP TABLE IF EXISTS `dishes`;
 DROP TABLE IF EXISTS `festivals`;
 DROP TABLE IF EXISTS `users`;
+DROP TABLE IF EXISTS `admins`;
 DROP TABLE IF EXISTS `scans`;
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- ------------------------------------------------------------------------------
+-- Table structure for `admins` (Administrator Login & Staff Management)
+-- ------------------------------------------------------------------------------
+CREATE TABLE `admins` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `username` VARCHAR(100) NOT NULL UNIQUE,
+  `email` VARCHAR(150) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) NOT NULL,
+  `full_name` VARCHAR(150) NOT NULL,
+  `role` ENUM('superadmin', 'admin', 'manager') DEFAULT 'admin',
+  `is_active` TINYINT(1) DEFAULT 1,
+  `last_login` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------------------
 -- Table structure for `users`
@@ -21,6 +38,7 @@ CREATE TABLE `users` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `full_name` VARCHAR(150) NOT NULL,
   `email` VARCHAR(150) NOT NULL UNIQUE,
+  `password_hash` VARCHAR(255) DEFAULT 'traveler123',
   `country` VARCHAR(100) DEFAULT 'International',
   `role` ENUM('admin', 'guide', 'traveler') DEFAULT 'traveler',
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP

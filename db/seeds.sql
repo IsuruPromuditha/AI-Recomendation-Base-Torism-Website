@@ -2,11 +2,18 @@
 -- WayFarer AI — Seed Data for Sri Lanka Travel & Tour Bookings
 -- ==============================================================================
 
-INSERT INTO `users` (`full_name`, `email`, `country`, `role`) VALUES
-('Travel Admin', 'admin@wayfarer.lk', 'Sri Lanka', 'admin'),
-('Chaminda Silva', 'guide.chaminda@wayfarer.lk', 'Sri Lanka', 'guide'),
-('Emma Watson', 'emma.w@gmail.com', 'United Kingdom', 'traveler'),
-('Liam Becker', 'liam.b@germany.de', 'Germany', 'traveler');
+USE `wayfarer_travel_db`;
+
+INSERT INTO `admins` (`username`, `email`, `password_hash`, `full_name`, `role`, `is_active`) VALUES
+('admin', 'admin@wayfarer.lk', 'admin123', 'Chief Travel Administrator', 'superadmin', 1),
+('operations', 'ops@wayfarer.lk', 'ops123', 'Island Tour Operations Manager', 'admin', 1),
+('reservations', 'booking@wayfarer.lk', 'reserve123', 'Front Desk Booking Officer', 'manager', 1);
+
+INSERT INTO `users` (`full_name`, `email`, `password_hash`, `country`, `role`) VALUES
+('Travel Admin', 'admin@wayfarer.lk', 'admin123', 'Sri Lanka', 'admin'),
+('Chaminda Silva', 'guide.chaminda@wayfarer.lk', 'guide123', 'Sri Lanka', 'guide'),
+('Emma Watson', 'emma.w@gmail.com', 'traveler123', 'United Kingdom', 'traveler'),
+('Liam Becker', 'liam.b@germany.de', 'traveler123', 'Germany', 'traveler');
 
 INSERT INTO `tours` (`title`, `slug`, `duration_days`, `price_usd`, `difficulty`, `highlights`, `included`, `image_url`) VALUES
 ('7-Day Golden Triangle & Misty Hill Country', 'golden-triangle-hill-country', 7, 890.00, 'Moderate', 'Sigiriya Rock Fortress, Dambulla Cave Temples, Kandy Temple of the Tooth, Scenic Ella Train Ride, Nine Arch Bridge', 'AC Chauffeur, 4-Star Heritage Hotels, Breakfast & Dinners, Monument Entrance Tickets, First-Class Train Seat', 'https://images.unsplash.com/photo-1586861635167-e5223aadc9fe?w=800&auto=format&fit=crop&q=80'),

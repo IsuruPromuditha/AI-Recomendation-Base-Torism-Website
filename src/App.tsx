@@ -330,7 +330,7 @@ export const App: React.FC = () => {
                     {activeNavTab === 'scanner' && 'Explore Uncharted Lands with Multimodal AI'}
                     {activeNavTab === 'tours' && 'Book Curated Sri Lanka Travel Expeditions'}
                     {activeNavTab === 'discover' && 'Sri Lanka: Culture, Culinary, Heritage & Economy'}
-                    {activeNavTab === 'admin' && 'Admin Tour Management & phpMyAdmin Database Studio'}
+                    {activeNavTab === 'admin' && 'Guest Reservations & Tour Operations'}
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-300 max-w-xl mt-1 leading-relaxed">
                     {activeNavTab === 'scanner' &&
@@ -340,7 +340,7 @@ export const App: React.FC = () => {
                     {activeNavTab === 'discover' &&
                       'Comprehensive guide to Sri Lankan ancient locations, famous dishes, bucket-list activities, cultural pageants, religions, and tea & gem industries.'}
                     {activeNavTab === 'admin' &&
-                      'Inspect and update customer bookings, browse database tables, and run SQL queries through the phpMyAdmin-compatible studio.'}
+                      'Review traveler reservations, verify booking details, and manage tour confirmation statuses.'}
                   </p>
                 </div>
 
@@ -430,9 +430,9 @@ export const App: React.FC = () => {
               </section>
             )}
 
-            {/* TAB 4: Admin Management & phpMyAdmin Studio */}
+            {/* TAB 4: Operations & Reservations Portal */}
             {activeNavTab === 'admin' && (
-              <section aria-label="Admin Management and phpMyAdmin Studio">
+              <section aria-label="Reservations and Operations Portal">
                 <AdminBookingAndDbStudio />
               </section>
             )}

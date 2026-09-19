@@ -213,7 +213,7 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
   const weekdayHeaders = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`relative ${isOpen ? 'z-40' : 'z-10'} ${className}`}>
       {/* 1. LABEL & TOP STATUS - Fixed Height & Aligned */}
       {label && (
         <div className="h-5 flex items-center justify-between mb-1.5 px-0.5">
@@ -241,28 +241,28 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
         aria-haspopup="dialog"
         className={`w-full h-[60px] group text-left px-3 py-2 rounded-xl transition-all duration-200 cursor-pointer flex items-center justify-between gap-2.5 border ${
           isOpen
-            ? 'bg-slate-900 border-amber-500/60 ring-1 ring-amber-500/20 shadow-lg shadow-black/40'
-            : 'bg-slate-950/80 hover:bg-slate-800/90 border-slate-700/80 hover:border-amber-500/40'
+            ? 'bg-slate-900 border-amber-500 ring-1 ring-amber-500/30 shadow-xl shadow-black/60'
+            : 'bg-slate-950 hover:bg-slate-900 border-slate-700 hover:border-amber-500/50'
         } ${buttonClassName}`}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          {/* Calendar Icon Box */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* User-Friendly Calendar Icon Box */}
           <div
-            className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors group-hover:bg-amber-500/20 ${
+            className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 shadow-sm ${
               isOpen
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'bg-amber-500/10 text-amber-400'
+                ? 'bg-amber-500 text-slate-950 border border-amber-400 shadow-amber-500/30'
+                : 'bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:bg-amber-500/25 group-hover:text-amber-300'
             }`}
           >
-            <CalendarIcon className="w-3.5 h-3.5" />
+            <CalendarDays className="w-4 h-4 flex-shrink-0" />
           </div>
 
           {/* Date Label & Helper Text */}
           <div className="min-w-0">
-            <div className="text-xs font-bold text-white truncate group-hover:text-amber-300">
+            <div className="text-xs font-bold text-white truncate group-hover:text-amber-300 transition-colors">
               {formatHumanDate(value)}
             </div>
-            <div className="text-[10px] text-slate-400 truncate">
+            <div className="text-[10px] text-slate-400 truncate font-medium">
               {helperText}
             </div>
           </div>
@@ -278,24 +278,24 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
         </div>
       </button>
 
-      {/* 3. USER-FRIENDLY CALENDAR DROPDOWN POPOVER - Traveler Control Deck Popover Colors */}
+      {/* 3. USER-FRIENDLY CALENDAR DROPDOWN POPOVER - Solid Opaque High-Contrast Traveler Deck Colors */}
       {isOpen && (
         <div
           role="dialog"
           aria-label="Select Tour Departure Date"
-          className="absolute left-0 min-w-full sm:min-w-[320px] top-full mt-2 z-[100] rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl p-3 animate-in fade-in zoom-in-95 duration-150"
+          className="absolute left-0 min-w-full sm:min-w-[330px] top-full mt-2 z-[150] rounded-2xl bg-slate-950 border-2 border-slate-700 shadow-[0_20px_50px_rgba(0,0,0,0.9)] p-3.5 animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Top Quick-Preset Chips for Rapid Booking */}
-          <div className="mb-2.5">
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-[10px] uppercase tracking-wider font-mono text-slate-400 font-bold">
-              <span className="flex items-center gap-1.5 text-amber-400">
-                <Sparkles className="w-3 h-3 text-amber-400" />
+          <div className="mb-3">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-[10px] uppercase tracking-wider font-mono text-slate-300 font-bold">
+              <span className="flex items-center gap-1.5 text-amber-400 font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                 <span>Quick Departure Presets</span>
               </span>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-slate-400 hover:text-white p-0.5 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Close calendar"
               >
                 <X className="w-3.5 h-3.5" />
@@ -313,10 +313,10 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
                       onChange(preset.date);
                       setIsOpen(false);
                     }}
-                    className={`py-1.5 px-2 rounded-xl text-[11px] font-medium text-center transition-all cursor-pointer truncate border ${
+                    className={`py-1.5 px-2 rounded-xl text-[11px] font-semibold text-center transition-all cursor-pointer truncate border ${
                       isPresetSelected
-                        ? 'bg-amber-500/20 text-amber-200 border-amber-500/30 font-semibold shadow-sm'
-                        : 'bg-slate-950/80 text-slate-300 hover:bg-slate-800 hover:text-white border-slate-800'
+                        ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-bold'
+                        : 'bg-slate-900 text-slate-200 hover:bg-slate-850 hover:text-white border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     {preset.label}
@@ -327,50 +327,50 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
           </div>
 
           {/* Month & Year Navigation Bar */}
-          <div className="flex items-center justify-between py-1.5 px-2 mb-2 bg-slate-950/80 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between py-1.5 px-2 mb-2.5 bg-slate-900 rounded-xl border border-slate-800">
             <button
               type="button"
               onClick={handlePrevMonth}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-colors cursor-pointer"
               aria-label="Previous Month"
             >
-              <ChevronLeft className="w-3.5 h-3.5" />
+              <ChevronLeft className="w-4 h-4" />
             </button>
 
-            <div className="text-xs font-mono font-semibold text-slate-200">
-              {monthNames[viewMonth]} <span className="text-amber-400 font-bold">{viewYear}</span>
+            <div className="text-xs font-mono font-bold text-white tracking-wide">
+              {monthNames[viewMonth]} <span className="text-amber-400 font-black">{viewYear}</span>
             </div>
 
             <button
               type="button"
               onClick={handleNextMonth}
-              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-amber-400 transition-colors cursor-pointer"
               aria-label="Next Month"
             >
-              <ChevronRight className="w-3.5 h-3.5" />
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Day of Week Headers */}
-          <div className="grid grid-cols-7 gap-1 text-center mb-1">
+          <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
             {weekdayHeaders.map((day) => (
               <span
                 key={day}
-                className="text-[10px] font-mono uppercase text-slate-400 py-0.5"
+                className="text-[10px] font-mono font-bold uppercase text-slate-400 py-0.5"
               >
                 {day}
               </span>
             ))}
           </div>
 
-          {/* Days Grid */}
+          {/* Days Grid - Solid Opaque High-Contrast Styling */}
           <div className="grid grid-cols-7 gap-1 text-center">
             {calendarDays.map((item, idx) => {
               if (!item.isCurrentMonth) {
                 return (
                   <div
                     key={`empty-${idx}`}
-                    className="h-8 flex items-center justify-center text-[11px] text-slate-600 select-none opacity-40 font-mono"
+                    className="h-8 flex items-center justify-center text-[11px] text-slate-700 select-none font-mono"
                   >
                     {item.dayNumber}
                   </div>
@@ -386,19 +386,19 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
                     onChange(item.dateStr);
                     setIsOpen(false);
                   }}
-                  className={`h-8 w-full rounded-xl text-xs font-medium transition-all duration-150 flex items-center justify-center relative cursor-pointer ${
+                  className={`h-8 w-full rounded-xl text-xs transition-all duration-150 flex items-center justify-center relative cursor-pointer border ${
                     item.isDisabled
-                      ? 'text-slate-600 cursor-not-allowed opacity-30 line-through'
+                      ? 'text-slate-700 cursor-not-allowed line-through border-transparent'
                       : item.isSelected
-                      ? 'bg-amber-500/20 text-amber-200 border border-amber-500/40 font-bold shadow-md ring-1 ring-amber-500/30'
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white active:scale-95'
-                  } ${item.isToday && !item.isSelected ? 'border border-amber-500/30 text-amber-300 font-semibold' : ''}`}
+                      ? 'bg-amber-500 text-slate-950 font-black border-amber-400 shadow-md scale-[1.04]'
+                      : 'text-slate-200 bg-slate-900/60 hover:bg-slate-800 hover:text-white font-medium border-slate-800/80 hover:border-amber-500/40'
+                  } ${item.isToday && !item.isSelected ? 'border-amber-500 text-amber-400 font-bold bg-amber-500/10' : ''}`}
                 >
                   <span>{item.dayNumber}</span>
                   {item.isToday && (
                     <span
-                      className={`absolute bottom-0.5 w-1 h-1 rounded-full ${
-                        item.isSelected ? 'bg-amber-300' : 'bg-amber-400'
+                      className={`absolute bottom-0.5 w-1.5 h-1.5 rounded-full ${
+                        item.isSelected ? 'bg-slate-950' : 'bg-amber-400'
                       }`}
                     />
                   )}
@@ -408,18 +408,18 @@ export const CalendarDropdownPicker: React.FC<CalendarDropdownPickerProps> = ({
           </div>
 
           {/* Bottom Confirmation Bar */}
-          <div className="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
-            <div className="flex items-center gap-1.5 text-slate-300 truncate">
+          <div className="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px] font-mono">
+            <div className="flex items-center gap-1.5 text-slate-200 truncate">
               <Check className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
               <span className="truncate">
-                Selected: <strong className="text-amber-300 font-semibold">{formatHumanDate(value)}</strong>
+                Selected: <strong className="text-amber-300 font-bold">{formatHumanDate(value)}</strong>
               </span>
             </div>
 
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-3 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-bold text-xs transition-colors cursor-pointer"
+              className="px-3 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors cursor-pointer shadow-sm"
             >
               Done
             </button>

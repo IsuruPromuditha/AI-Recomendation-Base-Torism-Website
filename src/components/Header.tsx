@@ -54,25 +54,19 @@ export const Header: React.FC<HeaderProps> = ({
       id: 'scanner' as const,
       label: 'Vision Scanner',
       icon: Camera,
-      tag: 'Multimodal OCR',
+      tag: 'Multimodal AI',
     },
     {
       id: 'tours' as const,
       label: 'Expeditions & Tours',
       icon: Compass,
-      tag: 'VIP Packages',
+      tag: 'Bespoke Packages',
     },
     {
       id: 'discover' as const,
       label: 'Discover Sri Lanka',
       icon: Landmark,
       tag: 'Heritage & Food',
-    },
-    {
-      id: 'admin' as const,
-      label: 'Admin Portal',
-      icon: isAdminAuthenticated ? ShieldCheck : Lock,
-      tag: isAdminAuthenticated ? 'Verified' : 'MySQL',
     },
   ];
 
@@ -208,6 +202,22 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Right: Actions & Mobile Toggle */}
         <div className="flex items-center gap-2 sm:gap-2.5 flex-shrink-0">
+          {/* Staff Reservations Portal (Only visible if authenticated officer) */}
+          {isAdminAuthenticated && (
+            <button
+              onClick={() => onSelectNavTab && onSelectNavTab('admin')}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold cursor-pointer transition-colors ${
+                activeNavTab === 'admin'
+                  ? 'bg-amber-500 text-slate-950 border-amber-400 font-bold'
+                  : 'bg-slate-900 hover:bg-slate-800 text-amber-300 border-slate-800'
+              }`}
+              title="Reservations Dashboard"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">Reservations</span>
+            </button>
+          )}
+
           {/* Online Connection Status Badge */}
           <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
             <span

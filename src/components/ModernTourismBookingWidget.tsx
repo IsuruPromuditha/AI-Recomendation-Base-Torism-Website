@@ -373,8 +373,8 @@ export const ModernTourismBookingWidget: React.FC<ModernTourismBookingWidgetProp
             </span>
           </div>
 
-          <div className="text-[10px] text-slate-500 font-mono">
-            Booking Engine v2.4 • Connected to MySQL
+          <div className="text-[10px] text-slate-400 font-mono">
+            Guaranteed 2026 Departures • SLTDA Certified
           </div>
         </div>
       </div>
@@ -451,27 +451,14 @@ export const ModernTourismBookingWidget: React.FC<ModernTourismBookingWidgetProp
                 </div>
 
                 <div className="flex items-center gap-3 justify-center pt-2">
-                  {onNavigateToAdmin && (
-                    <button
-                      onClick={() => {
-                        setIsCheckoutOpen(false);
-                        onNavigateToAdmin();
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5"
-                    >
-                      <FileCheck className="w-3.5 h-3.5 text-amber-400" />
-                      <span>View in Admin Console</span>
-                    </button>
-                  )}
-
                   <button
                     onClick={() => {
                       setIsCheckoutOpen(false);
                       setConfirmedBooking(null);
                     }}
-                    className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow"
+                    className="px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow cursor-pointer"
                   >
-                    Done
+                    Done & Return to Website
                   </button>
                 </div>
               </div>
